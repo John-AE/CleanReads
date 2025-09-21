@@ -1,19 +1,27 @@
-import { useState } from "react";
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import BlogPost from "@/components/BlogPost";
-import AuthModal from "@/components/AuthModal";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import workspaceImage from '@assets/generated_images/Workspace_blog_image_dc76c643.png';
 
 export default function PostDetail() {
   const [match, params] = useRoute("/post/:id");
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
-  // TODO: remove mock functionality - replace with real post data fetching
+  // Fetch real post data from API
+  const { data: post, isLoading, error } = useQuery({
+    queryKey: [`/api/posts/${params?.id}`],
+    enabled: !!params?.id,
+  });
+
+  // TODO: remove mock functionality - fallback mock post for display
   const mockPost = {
     id: params?.id || "1",
     title: "The Art of Mindful Design: Creating Spaces That Inspire",
@@ -37,36 +45,95 @@ Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saep
     category: "Design"
   };
 
-  const handleAuth = (credentials: any) => {
-    console.log('Authentication:', credentials);
-    setIsAuthenticated(true);
-    setIsAuthModalOpen(false);
-    // TODO: remove mock functionality - implement real authentication
+  const handleLogin = () => {
+    window.location.href = "/api/login";
   };
 
   const handleEdit = () => {
-    console.log('Navigate to edit post');
-    // TODO: remove mock functionality - implement real navigation
+    toast({
+      title: "Edit feature",
+      description: "Post editing functionality will be available soon",
+    });
   };
 
   const handleShare = () => {
-    console.log('Share post');
-    // TODO: remove mock functionality - implement real sharing
+    if (navigator.share) {
+      navigator.share({
+        title: post?.title || mockPost.title,
+        text: post?.excerpt || mockPost.content.substring(0, 200) + '...',
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast({
+        title: "Link copied",
+        description: "Post link has been copied to clipboard",
+      });
+    }
   };
 
   const handleCreatePost = () => {
-    console.log('Navigate to create post');
-    // TODO: remove mock functionality - implement real navigation
+    setLocation("/editor");
   };
 
   if (!match) {
-    return <div>Post not found</div>;
+    return <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">Post not found</h1>
+        <Link href="/">
+          <Button>Back to Home</Button>
+        </Link>
+      </div>
+    </div>;
   }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header 
+          onLoginClick={handleLogin}
+          isAuthenticated={isAuthenticated}
+          onCreatePost={handleCreatePost}
+        />
+        <div className="container mx-auto px-6 py-16 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading post...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || (!post && !isLoading)) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header 
+          onLoginClick={handleLogin}
+          isAuthenticated={isAuthenticated}
+          onCreatePost={handleCreatePost}
+        />
+        <div className="container mx-auto px-6 py-16 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Post not found</h1>
+            <p className="text-muted-foreground mb-6">The post you're looking for doesn't exist or has been removed.</p>
+            <Link href="/">
+              <Button>Back to Home</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Use real post data if available, otherwise fallback to mock
+  const displayPost = post || mockPost;
+  const isOwner = isAuthenticated && user && post && post.authorId === user.id;
 
   return (
     <div className="min-h-screen bg-background">
       <Header 
-        onLoginClick={() => setIsAuthModalOpen(true)}
+        onLoginClick={handleLogin}
         isAuthenticated={isAuthenticated}
         onCreatePost={handleCreatePost}
       />
@@ -82,18 +149,32 @@ Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saep
         </div>
         
         <BlogPost
-          {...mockPost}
-          isOwner={isAuthenticated}
+          id={displayPost.id}
+          title={displayPost.title}
+          content={displayPost.content}
+          image={displayPost.featuredImage || workspaceImage}
+          author={post?.author 
+            ? (post.author.firstName && post.author.lastName 
+                ? `${post.author.firstName} ${post.author.lastName}`
+                : post.author.email || 'Anonymous')
+            : displayPost.author
+          }
+          publishDate={post?.publishedAt 
+            ? new Date(post.publishedAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })
+            : displayPost.publishDate
+          }
+          readTime={Math.ceil(displayPost.content.length / 1000) + ' min'}
+          category={displayPost.category}
+          isOwner={isOwner}
           onEdit={handleEdit}
           onShare={handleShare}
         />
       </main>
       
-      <AuthModal 
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onAuth={handleAuth}
-      />
     </div>
   );
 }

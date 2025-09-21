@@ -1,19 +1,28 @@
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import BlogCard from "@/components/BlogCard";
-import AuthModal from "@/components/AuthModal";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import workspaceImage from '@assets/generated_images/Workspace_blog_image_dc76c643.png';
 import coffeeImage from '@assets/generated_images/Coffee_lifestyle_image_16f7daa6.png';
 import architectureImage from '@assets/generated_images/Architecture_blog_image_49c2d596.png';
 
 export default function Home() {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
-  // TODO: remove mock functionality - replace with real blog posts data
+  // Fetch real blog posts from API
+  const { data: posts, isLoading: isLoadingPosts } = useQuery({
+    queryKey: ["/api/posts?published=true"],
+  });
+
+  // TODO: remove mock functionality - fallback mock posts for display
   const mockPosts = [
     {
       id: "1",
@@ -78,16 +87,12 @@ export default function Home() {
     }
   ];
 
-  const handleAuth = (credentials: any) => {
-    console.log('Authentication:', credentials);
-    setIsAuthenticated(true);
-    setIsAuthModalOpen(false);
-    // TODO: remove mock functionality - implement real authentication
+  const handleLogin = () => {
+    window.location.href = "/api/login";
   };
 
   const handleCreatePost = () => {
-    console.log('Navigate to create post');
-    // TODO: remove mock functionality - implement real navigation
+    setLocation("/editor");
   };
 
   const scrollToContent = () => {
@@ -97,7 +102,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Header 
-        onLoginClick={() => setIsAuthModalOpen(true)}
+        onLoginClick={handleLogin}
         isAuthenticated={isAuthenticated}
         onCreatePost={handleCreatePost}
       />
@@ -130,9 +135,39 @@ export default function Home() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {mockPosts.map((post) => (
-            <BlogCard key={post.id} {...post} />
-          ))}
+          {isLoadingPosts ? (
+            // Loading skeletons
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-lg h-96 animate-pulse" />
+            ))
+          ) : posts && Array.isArray(posts) && posts.length > 0 ? (
+            posts.map((post: any) => (
+              <BlogCard 
+                key={post.id} 
+                id={post.id}
+                title={post.title}
+                excerpt={post.excerpt || post.content.substring(0, 200) + '...'}
+                image={post.featuredImage || workspaceImage}
+                author={post.author.firstName && post.author.lastName 
+                  ? `${post.author.firstName} ${post.author.lastName}`
+                  : post.author.email || 'Anonymous'
+                }
+                publishDate={new Date(post.publishedAt || post.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                })}
+                readTime={Math.ceil(post.content.length / 1000) + ' min'}
+                category={post.category}
+                featured={false}
+              />
+            ))
+          ) : (
+            // Fallback to mock posts if no real posts exist
+            mockPosts.map((post) => (
+              <BlogCard key={post.id} {...post} />
+            ))
+          )}
         </div>
         
         <div className="text-center mt-16">
@@ -157,11 +192,6 @@ export default function Home() {
         </div>
       </footer>
       
-      <AuthModal 
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onAuth={handleAuth}
-      />
     </div>
   );
 }

@@ -3,15 +3,15 @@ import type { Config } from "tailwindcss";
 const config: Config = {
   darkMode: ["class"],
   content: [
-    "./client/index.html",
-    "./client/src/**/*.{js,jsx,ts,tsx,html}",
+    "./index.html",
+    "./src/**/*.{js,jsx,ts,tsx,html}"
   ],
   theme: {
     extend: {
       borderRadius: {
-        lg: ".5625rem", // 9px
-        md: ".375rem",  // 6px
-        sm: ".1875rem", // 3px
+        lg: ".5625rem",
+        md: ".375rem",
+        sm: ".1875rem",
       },
       colors: {
         background: "hsl(var(--background) / <alpha-value>)",
@@ -106,10 +106,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [
-    require("tailwindcss-animate"),
-    require("@tailwindcss/typography"),
-  ],
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 };
 
 export default config;

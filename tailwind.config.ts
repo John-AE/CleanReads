@@ -10,7 +10,7 @@ const config: Config = {
     extend: {
       borderRadius: {
         lg: ".5625rem", // 9px
-        md: ".375rem", // 6px
+        md: ".375rem",  // 6px
         sm: ".1875rem", // 3px
       },
       colors: {
@@ -106,7 +106,10 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/typography"),
+  ],
 };
 
 export default config;

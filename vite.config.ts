@@ -2,18 +2,13 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { fileURLToPath } from "url";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-// ✅ create an ESM-compatible __dirname
+// ESM-safe __dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig(async () => ({
+export default defineConfig({
   plugins: [
-    react(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" && process.env.REPL_ID
-      ? [(await import("@replit/vite-plugin-cartographer")).cartographer()]
-      : []),
+    react(), // ✅ only the React plugin remains
   ],
   resolve: {
     alias: {
@@ -24,7 +19,7 @@ export default defineConfig(async () => ({
   },
   root: path.resolve(__dirname, "client"),
   build: {
-    outDir: path.resolve(__dirname, "dist/public"), // Remove /public if not needed
+    outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
   },
   server: {
@@ -33,4 +28,4 @@ export default defineConfig(async () => ({
       deny: ["**/.*"],
     },
   },
-}));
+});

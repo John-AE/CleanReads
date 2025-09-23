@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "server/index.ts": {
-      "maxDuration": 30
-    }
-  }
-}
